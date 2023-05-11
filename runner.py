@@ -1,7 +1,7 @@
 import pygame
 from sys import exit
 from random import randint, choice
-import pygame.mask
+import pygame.mask, pygame.mixer
 
 jump_debounce = True
 flip_debounce = True
@@ -136,19 +136,20 @@ class Ground(pygame.sprite.Sprite):
 
 
 def collision_sprite():
-    global current_score
-    for hand in hands:
-        hand_mask_offset = (hand.rect.x - shiba.sprite.rect.x, hand.rect.y - shiba.sprite.rect.y)
+	global current_score
+	for hand in hands:
+		hand_mask_offset = (hand.rect.x - shiba.sprite.rect.x, hand.rect.y - shiba.sprite.rect.y)
 
-        if shiba.sprite.mask.overlap(hand.mask, hand_mask_offset):
-            # Collision occurred
-            hands.empty()
-            current_score = 0
-            shiba.sprite.rect.bottomleft = (80, 300)
-            shiba.sprite.gravity = 0
-            return False
+		if shiba.sprite.mask.overlap(hand.mask, hand_mask_offset):
+			# Collision occurred
+			death_sound.play()
+			hands.empty()
+			current_score = 0
+			shiba.sprite.rect.bottomleft = (80, 300)
+			shiba.sprite.gravity = 0
+			return False
 
-    return True
+	return True
 
 def score_counter(score=0):
 	global current_score
@@ -159,12 +160,16 @@ def score_counter(score=0):
 
 # Initialize
 pygame.init()
+pygame.mixer.init()
+
 pygame.display.set_caption('Stubborn Shiba')
 clock = pygame.time.Clock()
 game_font = pygame.font.Font('assets/font/Pixeltype.ttf', 50)
 game_active = True
 # TODO: Add Music
-# bg_music = pygame.mixer.Sound('<Music Path>')
+death_sound = pygame.mixer.Sound('assets/audio/death.wav')
+soundtrack = pygame.mixer.Sound('assets/audio/stubborn_shiba_soundtrack.wav')
+soundtrack_volume = 0.1
 
 # Static Images
 screen = pygame.display.set_mode((800, 400))
@@ -220,6 +225,11 @@ while True:
 
 		# Collisions
 		game_active = collision_sprite()
+
+		if not pygame.mixer.music.get_busy():  # Check if the soundtrack is not already playing
+			pygame.mixer.music.load('assets/audio/stubborn_shiba_soundtrack.wav')
+			pygame.mixer.music.set_volume(soundtrack_volume)
+			pygame.mixer.music.play(-1)  # -1 plays the soundtrack on a loop
 
 	else:
 		screen.blit(game_over_surf, game_over_rect)
