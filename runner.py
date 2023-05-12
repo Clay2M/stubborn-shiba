@@ -127,15 +127,29 @@ class Ground(pygame.sprite.Sprite):
 		self.image = ground_surf
 		self.rect = self.image.get_rect(topleft = (start_position, 300))
 	
-	def update(self):
+	def update(self) -> None:
 		self.rect.x -= 7
 		self.destroy()
 	
-	def destroy(self):
+	def destroy(self) -> None:
 		if self.rect.topleft[0] <= -812:
 			self.kill()
 			ground.add(Ground(812))
 
+class Sky(pygame.sprite.Sprite):
+	def __init__(self, start_position) -> None:
+		super().__init__()
+		self.image = sky_surf
+		self.rect = self.image.get_rect(topleft = (start_position, 0))
+	
+	def update(self) -> None:
+		self.rect.x -= 1
+		self.destroy()
+	
+	def destroy(self) -> None:
+		if self.rect.topleft[0] <= -850:
+			self.kill()
+			sky.add(Sky(850))
 
 def collision_sprite():
 	global current_score
@@ -188,6 +202,8 @@ shiba.add(Shiba())
 hands = pygame.sprite.Group()
 ground = pygame.sprite.Group()
 ground.add(Ground(0), Ground(812))
+sky = pygame.sprite.Group()
+sky.add(Sky(0), Sky(850))
 
 # Intro Screen
 intro_font = pygame.font.Font('assets/font/Pixeltype.ttf', 100) # TODO: Figure out if game_font can be used with different size
@@ -217,9 +233,13 @@ while True:
 				hands.add(Hands(choice(['hand_1', 'hand_2', 'hand_1', 'hand_1'])))
 	
 	if game_active:
+		# Sky
+		sky.draw(screen)
+		sky.update()
+		
+		# Score
 		if current_score == -1:
 			current_score = 0
-		screen.blit(sky_surf, (0,0))
 		score_counter()
 
 		# Shiba
