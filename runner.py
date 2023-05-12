@@ -142,6 +142,7 @@ def collision_sprite():
 
 		if shiba.sprite.mask.overlap(hand.mask, hand_mask_offset):
 			# Collision occurred
+			death_sound.set_volume(death_sound_volume)
 			death_sound.play()
 			hands.empty()
 			current_score = 0
@@ -169,7 +170,10 @@ game_active = True
 # TODO: Add Music
 death_sound = pygame.mixer.Sound('assets/audio/death.wav')
 soundtrack = pygame.mixer.Sound('assets/audio/stubborn_shiba_soundtrack.wav')
+death_sound_volume = 0.2
 soundtrack_volume = 0.1
+
+game_started = False
 
 # Static Images
 screen = pygame.display.set_mode((800, 400))
