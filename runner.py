@@ -4,7 +4,7 @@ from random import randint, choice
 import pygame.mask, pygame.mixer
 
 jump_debounce = True
-flip_debounce = True
+double_jump_debounce = True
 secret_active = False
 game_active = False
 start_time = 0
@@ -12,7 +12,9 @@ current_score = -1
 secret_start_time = 0
 
 class Shiba(pygame.sprite.Sprite):
+	''' Shiba sprite with frames for running and jumping '''
 	def __init__(self) -> None:
+		''' Initializes sprite class, imports frames, sets animation index, and creates gravity for sprite '''
 		super().__init__()
 
 		# Importing frames for running animation
@@ -49,8 +51,9 @@ class Shiba(pygame.sprite.Sprite):
 
 		self.mask = pygame.mask.from_surface(self.image)
 	
-	def player_input(self):
-		global jump_debounce, flip_debounce, start_time
+	def player_input(self) -> None:
+		''' Checks if player presses the spacebar and changes shiba sprite gravity if they did '''
+		global jump_debounce, double_jump_debounce, start_time
 		current_time = pygame.time.get_ticks() - start_time
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_SPACE] and self.rect.bottom >= 300 and jump_debounce:
@@ -59,23 +62,25 @@ class Shiba(pygame.sprite.Sprite):
 			start_time = pygame.time.get_ticks()
 		elif self.rect.bottom >= 300 and not jump_debounce and current_time >= 250:
 			jump_debounce = True
-		elif keys[pygame.K_SPACE] and not jump_debounce and flip_debounce and current_time >= 250:
+		elif keys[pygame.K_SPACE] and not jump_debounce and double_jump_debounce and current_time >= 250:
 			self.gravity = -15
 			self.shiba_jumping_index = 0
-			flip_debounce = False
+			double_jump_debounce = False
 		elif jump_debounce:
-			flip_debounce = True
+			double_jump_debounce = True
 
 		# Mask update
 		self.mask = pygame.mask.from_surface(self.image)
 	
-	def apply_gravity(self):
+	def apply_gravity(self) -> None:
+		''' Applies a constant force of gravity to shiba sprite by adding gravity to y-values '''
 		self.gravity += 1
 		self.rect.y += self.gravity
 		if self.rect.bottom >= 300:
 			self.rect.bottom = 300
 	
-	def animation_player(self):
+	def animation_player(self) -> None:
+		''' Picks animation to play by checking if shiba sprite is in jumping state '''
 		if not jump_debounce:
 			self.shiba_jumping_index += 0.15
 			if self.shiba_jumping_index >= len(self.shiba_jumping): self.shiba_jumping_index = 0
@@ -86,13 +91,16 @@ class Shiba(pygame.sprite.Sprite):
 			if self.shiba_running_index >= len(self.shiba_running): self.shiba_running_index = 0
 			self.image = self.shiba_running[int(self.shiba_running_index)]
 		
-	def update(self):
+	def update(self) -> None:
+		''' Calls necessary function for simulating movement and player_input on shiba sprite '''
 		self.player_input()
 		self.apply_gravity()
 		self.animation_player()
 
 class Hands(pygame.sprite.Sprite):
+	''' Obstacle sprites represented by hands to pet shiba '''
 	def __init__(self, type) -> None:
+		''' Initializes sprite class, picks hand type to generate, and randomly sets x-position '''
 		super().__init__()
 		self.passed = False
 		if type == "hand_1":
@@ -110,32 +118,39 @@ class Hands(pygame.sprite.Sprite):
 		
 		self.mask = pygame.mask.from_surface(self.image)
 	
-	def update(self, speed):
-		self.rect.x -= speed
-		self.destroy()
-		self.score_checker()
-	
-	def destroy(self):
+	def destroy(self) -> None:
+		''' Destroys hand sprite when off-screen '''
 		if self.rect.x <= -100:
 			self.kill()
 	
-	def score_checker(self):
+	def score_checker(self) -> None:
+		''' Checks shiba sprite location relative to hand. Calls score_counter if hand passes shiba sprite. '''
 		if self.rect.x <= 80 and not self.passed:
 			self.passed = True
 			score_counter(1)
 
+	def update(self, speed) -> None:
+		''' Calls necessary function for tracking hands position and updating dependent values '''
+		self.rect.x -= speed
+		self.destroy()
+		self.score_checker()
+
 class Ground(pygame.sprite.Sprite):
+	''' Ground sprite to generate seamless moving ground images '''
 	def __init__(self, start_position, image_name) -> None:
+		''' Initializes sprite class, picks image_name to generate '''
 		super().__init__()
 		self.image = pygame.image.load('assets/graphics/environment/'+image_name+'.png').convert()
 		self.rect = self.image.get_rect(topleft = (start_position, 300))
 	
 	def update(self, speed) -> None:
+		''' Updates sprite x value by the speed parameters '''
 		self.rect.x -= speed
 		self.destroy()
 	
 	def destroy(self) -> None:
-		if self.rect.topleft[0] <= -812:
+		''' Destroys ground sprite when it leaves screen on the left side '''
+		if self.rect.topright[0] <= 0:
 			self.kill()
 			if not secret_active:
 				ground.add(Ground(812, 'ground'))
@@ -143,28 +158,32 @@ class Ground(pygame.sprite.Sprite):
 				ground.add(Ground(812, 'secret_ground'))
 
 class Sky(pygame.sprite.Sprite):
+	''' Sky sprite to generate seamless moving sky images '''
 	def __init__(self, start_position, image_name) -> None:
+		''' Initializes sprite class, picks image_name to generate '''
 		super().__init__()
 		self.image = pygame.image.load('assets/graphics/environment/'+image_name+'.png').convert()
 		self.rect = self.image.get_rect(topleft = (start_position, 0))
 	
 	def update(self, speed) -> None:
+		''' Updates sprite x value by the speed parameters '''
 		self.rect.x -= speed
 		self.destroy()
 	
 	def destroy(self) -> None:
-		if self.rect.topleft[0] <= -850:
+		''' Destroys sky sprite when it leaves screen on the left side '''
+		if self.rect.topright[0] <= 0:
 			self.kill()
 			if not secret_active:
 				sky.add(Sky(850, 'sky'))
 			else:
 				sky.add(Sky(850, 'secret_sky'))
 
-def collision_sprite():
+def collision_sprite() -> bool:
+	''' Checks if hand and shiba sprites collide. Returns False if they collide. '''
 	global current_score, secret_active, secret_start_time
 	for hand in hands:
 		hand_mask_offset = (hand.rect.x - shiba.sprite.rect.x, hand.rect.y - shiba.sprite.rect.y)
-
 		if shiba.sprite.mask.overlap(hand.mask, hand_mask_offset):
 			# Collision occurred
 			death_sound.set_volume(death_sound_volume)
@@ -182,17 +201,17 @@ def collision_sprite():
 			shiba.sprite.rect.bottomleft = (80, 300)
 			shiba.sprite.gravity = 0
 			return False
-
 	return True
 
-def score_counter(score=0):
+def score_counter(score=0) -> None:
+	''' Adds score to current_score and updates score_surf with current_score value '''
 	global current_score
 	current_score += score
 	score_surf = game_font.render(f'{current_score}', False, (180, 180, 180))
 	score_rect = score_surf.get_rect(midtop = (400, 25))
 	screen.blit(score_surf, score_rect)
 
-# Initialize
+# Initialize pygame and assets
 pygame.init()
 pygame.mixer.init()
 pygame.display.set_caption('Stubborn Shiba')
@@ -216,6 +235,8 @@ shiba.add(Shiba())
 hands = pygame.sprite.Group()
 ground = pygame.sprite.Group()
 sky = pygame.sprite.Group()
+sky.add(Sky(0, 'sky'), Sky(850, 'sky'))
+ground.add(Ground(0, 'ground'), Ground(812, 'ground'))
 
 # Intro Screen
 intro_font = pygame.font.Font('assets/font/Pixeltype.ttf', 100)
@@ -235,7 +256,6 @@ secret_subtitle_rect = secret_subtitle_surf.get_rect(midtop=(400,200))
 # Timer
 hand_timer = pygame.USEREVENT + 1
 pygame.time.set_timer(hand_timer, 1100)
-
 while True:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -279,8 +299,6 @@ while True:
 			pygame.mixer.music.play(-1)  # -1 plays the soundtrack on a loop
 
 	elif not game_active and current_score < 100:
-		sky.add(Sky(0, 'sky'), Sky(850, 'sky'))
-		ground.add(Ground(0, 'ground'), Ground(812, 'ground'))
 		if current_score == -1:
 			screen.blit(game_name_surf, game_name_rect)
 			screen.blit(start_game_surf, start_game_rect)
@@ -288,6 +306,7 @@ while True:
 			screen.blit(game_over_surf, game_over_rect)
 			screen.blit(restart_game_surf, restart_game_rect)
 	else:
+		# A "fun" little easter egg for users who get 100 points
 		screen.fill('Black')
 		if secret_active == False:
 			pygame.mixer.music.rewind()
@@ -334,6 +353,6 @@ while True:
 			# Collisions
 			game_active = collision_sprite()
 	
-	pygame.display.update()
-	clock.tick(60)
+	pygame.display.update() # Required by pygame to update changes to display
+	clock.tick(60) # Sets max framerate at 60 FPS
 
