@@ -6,7 +6,7 @@ import pygame.mask, pygame.mixer
 jump_debounce = True
 flip_debounce = True
 start_time = 0
-current_score = 0
+current_score = -1
 
 class Shiba(pygame.sprite.Sprite):
 	def __init__(self) -> None:
@@ -91,6 +91,7 @@ class Shiba(pygame.sprite.Sprite):
 class Hands(pygame.sprite.Sprite):
 	def __init__(self, type) -> None:
 		super().__init__()
+		self.passed = False
 		if type == "hand_1":
 			hand = pygame.image.load('assets/graphics/hands/hand_1.png').convert_alpha()
 			hand = pygame.transform.scale2x(hand)
@@ -107,7 +108,7 @@ class Hands(pygame.sprite.Sprite):
 		self.mask = pygame.mask.from_surface(self.image)
 	
 	def update(self):
-		self.rect.x -= 6
+		self.rect.x -= 7
 		self.destroy()
 		self.score_checker()
 	
@@ -116,23 +117,24 @@ class Hands(pygame.sprite.Sprite):
 			self.kill()
 	
 	def score_checker(self):
-		if 75 <= self.rect.x <= 80:
+		if 75 <= self.rect.x <= 82 and not self.passed:
+			self.passed = True
 			score_counter(1)
 
 class Ground(pygame.sprite.Sprite):
 	def __init__(self, start_position) -> None:
 		super().__init__()
-		sky = pygame.image.load('assets/graphics/environment/ground.png')
-		self.image = sky
+		self.image = ground_surf
 		self.rect = self.image.get_rect(topleft = (start_position, 300))
 	
 	def update(self):
-		self.rect.x -= 6
+		self.rect.x -= 7
 		self.destroy()
 	
 	def destroy(self):
-		if self.rect.x <= -380:
+		if self.rect.topleft[0] <= -812:
 			self.kill()
+			ground.add(Ground(812))
 
 
 def collision_sprite():
@@ -144,8 +146,8 @@ def collision_sprite():
 			# Collision occurred
 			death_sound.set_volume(death_sound_volume)
 			death_sound.play()
-			hands.empty()
 			current_score = 0
+			hands.empty()
 			shiba.sprite.rect.bottomleft = (80, 300)
 			shiba.sprite.gravity = 0
 			return False
@@ -166,54 +168,47 @@ pygame.mixer.init()
 pygame.display.set_caption('Stubborn Shiba')
 clock = pygame.time.Clock()
 game_font = pygame.font.Font('assets/font/Pixeltype.ttf', 50)
-game_active = True
+game_active = False
 # TODO: Add Music
 death_sound = pygame.mixer.Sound('assets/audio/death.wav')
 soundtrack = pygame.mixer.Sound('assets/audio/stubborn_shiba_soundtrack.wav')
 death_sound_volume = 0.2
 soundtrack_volume = 0.1
 
-game_started = False
-
 # Static Images
 screen = pygame.display.set_mode((800, 400))
 sky_surf = pygame.image.load('assets/graphics/environment/Sky.png').convert()
-ground_surf = pygame.image.load('assets/graphics/environment/ground.png').convert()
+ground_surf = pygame.image.load('assets/graphics/environment/ground.png')
+screen.blit(sky_surf, (0,0))
+screen.blit(ground_surf, (0,300))
 
 # Groups
 shiba = pygame.sprite.GroupSingle()
 shiba.add(Shiba())
 hands = pygame.sprite.Group()
 ground = pygame.sprite.Group()
-ground.add(Ground(0), Ground(800))
+ground.add(Ground(0), Ground(812))
 
 # Intro Screen
-intro_font = pygame.font.Font('assets/font/Pixeltype.ttf', 150) # TODO: Figure out if game_font can be used with different size
+intro_font = pygame.font.Font('assets/font/Pixeltype.ttf', 100) # TODO: Figure out if game_font can be used with different size
+game_name_surf = intro_font.render("Stubborn Shiba", False, (0,0,0))
 game_over_surf = intro_font.render("Game Over!", False, (0,0,0))
+start_game_surf = game_font.render("Press Space to Start", False, (0,0,0))
 restart_game_surf = game_font.render("Press Space to Restart", False, (0,0,0))
-game_over_rect = game_over_surf.get_rect(midbottom = (400, 200))
+game_name_rect = game_name_surf.get_rect(midbottom=(400,200))
+game_over_rect = game_over_surf.get_rect(midbottom=(400,200))
+start_game_rect = start_game_surf.get_rect(midtop = (400, 200))
 restart_game_rect = restart_game_surf.get_rect(midtop = (400, 200))
 
 # Timer
 hand_timer = pygame.USEREVENT + 1
 pygame.time.set_timer(hand_timer, 1100)
 
-# Define button properties
-button_rect = pygame.Rect(300, 250, 200, 100)
-button_color = (0, 255, 0)  # Green
-button_text = "Play"
-font = pygame.font.Font(None, 36)
-
 while True:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			pygame.quit()
 			exit()
-		elif event.type == pygame.MOUSEBUTTONDOWN:
-			if event.button == 1 and button_rect.collidepoint(event.pos):
-				# Button clicked!
-				print("Button clicked!")
-				# Perform desired actions here
 		if not game_active:
 			if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
 				game_active = True
@@ -222,15 +217,10 @@ while True:
 				hands.add(Hands(choice(['hand_1', 'hand_2', 'hand_1', 'hand_1'])))
 	
 	if game_active:
+		if current_score == -1:
+			current_score = 0
 		screen.blit(sky_surf, (0,0))
-		screen.blit(ground_surf, (0, 300))
 		score_counter()
-
-
-		pygame.draw.rect(screen, button_color, button_rect)
-		text_surface = font.render(button_text, True, (0, 0, 0))  # Black text
-		text_rect = text_surface.get_rect(center=button_rect.center)
-		screen.blit(text_surface, text_rect)
 
 		# Shiba
 		shiba.draw(screen)
@@ -241,8 +231,8 @@ while True:
 		hands.update()
 
 		# Ground
-		#ground.draw(screen)
-		#ground.update()
+		ground.draw(screen)
+		ground.update()
 
 		# Collisions
 		game_active = collision_sprite()
@@ -253,8 +243,12 @@ while True:
 			pygame.mixer.music.play(-1)  # -1 plays the soundtrack on a loop
 
 	else:
-		screen.blit(game_over_surf, game_over_rect)
-		screen.blit(restart_game_surf, restart_game_rect)
+		if current_score == -1:
+			screen.blit(game_name_surf, game_name_rect)
+			screen.blit(start_game_surf, start_game_rect)
+		else:
+			screen.blit(game_over_surf, game_over_rect)
+			screen.blit(restart_game_surf, restart_game_rect)
 	
 	pygame.display.update()
 	clock.tick(60)
