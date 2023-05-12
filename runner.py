@@ -198,14 +198,25 @@ restart_game_rect = restart_game_surf.get_rect(midtop = (400, 200))
 hand_timer = pygame.USEREVENT + 1
 pygame.time.set_timer(hand_timer, 1100)
 
+# Define button properties
+button_rect = pygame.Rect(300, 250, 200, 100)
+button_color = (0, 255, 0)  # Green
+button_text = "Play"
+font = pygame.font.Font(None, 36)
+
 while True:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			pygame.quit()
 			exit()
+		elif event.type == pygame.MOUSEBUTTONDOWN:
+			if event.button == 1 and button_rect.collidepoint(event.pos):
+				# Button clicked!
+				print("Button clicked!")
+				# Perform desired actions here
 		if not game_active:
 			if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-					game_active = True
+				game_active = True
 		else:
 			if event.type == hand_timer:
 				hands.add(Hands(choice(['hand_1', 'hand_2', 'hand_1', 'hand_1'])))
@@ -214,6 +225,12 @@ while True:
 		screen.blit(sky_surf, (0,0))
 		screen.blit(ground_surf, (0, 300))
 		score_counter()
+
+
+		pygame.draw.rect(screen, button_color, button_rect)
+		text_surface = font.render(button_text, True, (0, 0, 0))  # Black text
+		text_rect = text_surface.get_rect(center=button_rect.center)
+		screen.blit(text_surface, text_rect)
 
 		# Shiba
 		shiba.draw(screen)
@@ -241,3 +258,4 @@ while True:
 	
 	pygame.display.update()
 	clock.tick(60)
+
