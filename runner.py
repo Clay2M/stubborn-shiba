@@ -5,8 +5,11 @@ import pygame.mask, pygame.mixer
 
 jump_debounce = True
 flip_debounce = True
+secret_active = False
+game_active = False
 start_time = 0
 current_score = -1
+secret_start_time = 0
 
 class Shiba(pygame.sprite.Sprite):
 	def __init__(self) -> None:
@@ -107,8 +110,8 @@ class Hands(pygame.sprite.Sprite):
 		
 		self.mask = pygame.mask.from_surface(self.image)
 	
-	def update(self):
-		self.rect.x -= 7
+	def update(self, speed):
+		self.rect.x -= speed
 		self.destroy()
 		self.score_checker()
 	
@@ -117,42 +120,48 @@ class Hands(pygame.sprite.Sprite):
 			self.kill()
 	
 	def score_checker(self):
-		if 75 <= self.rect.x <= 82 and not self.passed:
+		if self.rect.x <= 80 and not self.passed:
 			self.passed = True
 			score_counter(1)
 
 class Ground(pygame.sprite.Sprite):
-	def __init__(self, start_position) -> None:
+	def __init__(self, start_position, image_name) -> None:
 		super().__init__()
-		self.image = ground_surf
+		self.image = pygame.image.load('assets/graphics/environment/'+image_name+'.png').convert()
 		self.rect = self.image.get_rect(topleft = (start_position, 300))
 	
-	def update(self) -> None:
-		self.rect.x -= 7
+	def update(self, speed) -> None:
+		self.rect.x -= speed
 		self.destroy()
 	
 	def destroy(self) -> None:
 		if self.rect.topleft[0] <= -812:
 			self.kill()
-			ground.add(Ground(812))
+			if not secret_active:
+				ground.add(Ground(812, 'ground'))
+			else:
+				ground.add(Ground(812, 'secret_ground'))
 
 class Sky(pygame.sprite.Sprite):
-	def __init__(self, start_position) -> None:
+	def __init__(self, start_position, image_name) -> None:
 		super().__init__()
-		self.image = sky_surf
+		self.image = pygame.image.load('assets/graphics/environment/'+image_name+'.png').convert()
 		self.rect = self.image.get_rect(topleft = (start_position, 0))
 	
-	def update(self) -> None:
-		self.rect.x -= 1
+	def update(self, speed) -> None:
+		self.rect.x -= speed
 		self.destroy()
 	
 	def destroy(self) -> None:
 		if self.rect.topleft[0] <= -850:
 			self.kill()
-			sky.add(Sky(850))
+			if not secret_active:
+				sky.add(Sky(850, 'sky'))
+			else:
+				sky.add(Sky(850, 'secret_sky'))
 
 def collision_sprite():
-	global current_score
+	global current_score, secret_active, secret_start_time
 	for hand in hands:
 		hand_mask_offset = (hand.rect.x - shiba.sprite.rect.x, hand.rect.y - shiba.sprite.rect.y)
 
@@ -162,6 +171,14 @@ def collision_sprite():
 			death_sound.play()
 			current_score = 0
 			hands.empty()
+			if secret_active == True:
+				pygame.mixer.music.stop()
+				pygame.mixer.music.load('assets/audio/stubborn_shiba_soundtrack.wav')
+				pygame.mixer.music.set_volume(soundtrack_volume)
+				pygame.mixer.music.play(-1)  # -1 plays the soundtrack on a loop
+				pygame.time.set_timer(hand_timer, 1100)
+				secret_start_time = 0
+				secret_active=False
 			shiba.sprite.rect.bottomleft = (80, 300)
 			shiba.sprite.gravity = 0
 			return False
@@ -178,12 +195,9 @@ def score_counter(score=0):
 # Initialize
 pygame.init()
 pygame.mixer.init()
-
 pygame.display.set_caption('Stubborn Shiba')
 clock = pygame.time.Clock()
 game_font = pygame.font.Font('assets/font/Pixeltype.ttf', 50)
-game_active = False
-# TODO: Add Music
 death_sound = pygame.mixer.Sound('assets/audio/death.wav')
 soundtrack = pygame.mixer.Sound('assets/audio/stubborn_shiba_soundtrack.wav')
 death_sound_volume = 0.2
@@ -191,8 +205,8 @@ soundtrack_volume = 0.1
 
 # Static Images
 screen = pygame.display.set_mode((800, 400))
-sky_surf = pygame.image.load('assets/graphics/environment/Sky.png').convert()
-ground_surf = pygame.image.load('assets/graphics/environment/ground.png')
+sky_surf = pygame.image.load('assets/graphics/environment/sky.png').convert()
+ground_surf = pygame.image.load('assets/graphics/environment/ground.png').convert()
 screen.blit(sky_surf, (0,0))
 screen.blit(ground_surf, (0,300))
 
@@ -201,20 +215,22 @@ shiba = pygame.sprite.GroupSingle()
 shiba.add(Shiba())
 hands = pygame.sprite.Group()
 ground = pygame.sprite.Group()
-ground.add(Ground(0), Ground(812))
 sky = pygame.sprite.Group()
-sky.add(Sky(0), Sky(850))
 
 # Intro Screen
-intro_font = pygame.font.Font('assets/font/Pixeltype.ttf', 100) # TODO: Figure out if game_font can be used with different size
+intro_font = pygame.font.Font('assets/font/Pixeltype.ttf', 100)
 game_name_surf = intro_font.render("Stubborn Shiba", False, (0,0,0))
 game_over_surf = intro_font.render("Game Over!", False, (0,0,0))
 start_game_surf = game_font.render("Press Space to Start", False, (0,0,0))
 restart_game_surf = game_font.render("Press Space to Restart", False, (0,0,0))
+secret_title_surf = game_font.render("I don't know why you're still here", False, (255, 255, 255))
+secret_subtitle_surf = intro_font.render("but good luck :)))", False, (255,255,255))
 game_name_rect = game_name_surf.get_rect(midbottom=(400,200))
 game_over_rect = game_over_surf.get_rect(midbottom=(400,200))
-start_game_rect = start_game_surf.get_rect(midtop = (400, 200))
-restart_game_rect = restart_game_surf.get_rect(midtop = (400, 200))
+start_game_rect = start_game_surf.get_rect(midtop=(400, 200))
+restart_game_rect = restart_game_surf.get_rect(midtop=(400, 200))
+secret_title_rect = secret_title_surf.get_rect(midbottom=(400,200))
+secret_subtitle_rect = secret_subtitle_surf.get_rect(midtop=(400,200))
 
 # Timer
 hand_timer = pygame.USEREVENT + 1
@@ -232,10 +248,10 @@ while True:
 			if event.type == hand_timer:
 				hands.add(Hands(choice(['hand_1', 'hand_2', 'hand_1', 'hand_1'])))
 	
-	if game_active:
+	if game_active and current_score < 100:
 		# Sky
 		sky.draw(screen)
-		sky.update()
+		sky.update(1)
 		
 		# Score
 		if current_score == -1:
@@ -248,11 +264,11 @@ while True:
 
 		# Hands
 		hands.draw(screen)
-		hands.update()
+		hands.update(7)
 
 		# Ground
 		ground.draw(screen)
-		ground.update()
+		ground.update(7)
 
 		# Collisions
 		game_active = collision_sprite()
@@ -262,13 +278,61 @@ while True:
 			pygame.mixer.music.set_volume(soundtrack_volume)
 			pygame.mixer.music.play(-1)  # -1 plays the soundtrack on a loop
 
-	else:
+	elif not game_active and current_score < 100:
+		sky.add(Sky(0, 'sky'), Sky(850, 'sky'))
+		ground.add(Ground(0, 'ground'), Ground(812, 'ground'))
 		if current_score == -1:
 			screen.blit(game_name_surf, game_name_rect)
 			screen.blit(start_game_surf, start_game_rect)
 		else:
 			screen.blit(game_over_surf, game_over_rect)
 			screen.blit(restart_game_surf, restart_game_rect)
+	else:
+		screen.fill('Black')
+		if secret_active == False:
+			pygame.mixer.music.rewind()
+			hands.empty()
+			sky.empty()
+			ground.empty()
+			if secret_start_time == 0:
+				secret_start_time = pygame.time.get_ticks()
+			if pygame.time.get_ticks() - secret_start_time >= 1000:
+				screen.blit(secret_title_surf, secret_title_rect)
+			if pygame.time.get_ticks() - secret_start_time >= 5000:
+				screen.blit(secret_subtitle_surf, secret_subtitle_rect)
+			if pygame.time.get_ticks() - secret_start_time >= 6000:
+				secret_active = True
+				sky.add(Sky(0, 'secret_sky'), Sky(850, 'secret_sky'))
+				ground.add(Ground(0, 'secret_ground'), Ground(812, 'secret_ground'))
+				pygame.mixer.music.stop()
+				pygame.mixer.music.load('assets/audio/secret_song.mp3')
+				pygame.mixer.music.set_volume(0.2)
+				pygame.mixer.music.play(-1)
+				pygame.time.set_timer(hand_timer, 800)
+		else:
+			# Sky
+			sky.draw(screen)
+			sky.update(10)
+			
+			# Score
+			if current_score == -1:
+				current_score = 0
+			score_counter()
+
+			# Shiba
+			shiba.draw(screen)
+			shiba.update()
+
+			# Hands
+			hands.draw(screen)
+			hands.update(14)
+
+			# Ground
+			ground.draw(screen)
+			ground.update(14)
+
+			# Collisions
+			game_active = collision_sprite()
 	
 	pygame.display.update()
 	clock.tick(60)
