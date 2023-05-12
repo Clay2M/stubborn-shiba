@@ -140,7 +140,7 @@ class Ground(pygame.sprite.Sprite):
 	def __init__(self, start_position, image_name) -> None:
 		''' Initializes sprite class, picks image_name to generate '''
 		super().__init__()
-		self.image = pygame.image.load('assets/graphics/environment/'+image_name+'.png').convert()
+		self.image = pygame.image.load('assets/graphics/background/'+image_name+'.png').convert()
 		self.rect = self.image.get_rect(topleft = (start_position, 300))
 	
 	def update(self, speed) -> None:
@@ -162,7 +162,7 @@ class Sky(pygame.sprite.Sprite):
 	def __init__(self, start_position, image_name) -> None:
 		''' Initializes sprite class, picks image_name to generate '''
 		super().__init__()
-		self.image = pygame.image.load('assets/graphics/environment/'+image_name+'.png').convert()
+		self.image = pygame.image.load('assets/graphics/background/'+image_name+'.png').convert()
 		self.rect = self.image.get_rect(topleft = (start_position, 0))
 	
 	def update(self, speed) -> None:
@@ -224,8 +224,8 @@ soundtrack_volume = 0.1
 
 # Static Images
 screen = pygame.display.set_mode((800, 400))
-sky_surf = pygame.image.load('assets/graphics/environment/sky.png').convert()
-ground_surf = pygame.image.load('assets/graphics/environment/ground.png').convert()
+sky_surf = pygame.image.load('assets/graphics/background/sky.png').convert()
+ground_surf = pygame.image.load('assets/graphics/background/ground.png').convert()
 screen.blit(sky_surf, (0,0))
 screen.blit(ground_surf, (0,300))
 
