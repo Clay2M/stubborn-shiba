@@ -191,13 +191,17 @@ def collision_sprite() -> bool:
 			current_score = 0
 			hands.empty()
 			if secret_active == True:
+				secret_active=False
 				pygame.mixer.music.stop()
 				pygame.mixer.music.load('assets/audio/stubborn_shiba_soundtrack.wav')
 				pygame.mixer.music.set_volume(soundtrack_volume)
 				pygame.mixer.music.play(-1)  # -1 plays the soundtrack on a loop
 				pygame.time.set_timer(hand_timer, 1100)
 				secret_start_time = 0
-				secret_active=False
+				sky.empty()
+				ground.empty()
+				sky.add(Sky(0, 'sky'), Sky(850, 'sky'))
+				ground.add(Ground(0, 'ground'), Ground(812, 'ground'))
 			shiba.sprite.rect.bottomleft = (80, 300)
 			shiba.sprite.gravity = 0
 			return False
